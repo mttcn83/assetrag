@@ -25,7 +25,7 @@ def test_package_already_in_project_gets_a_boost(L, tmp_path):
     K.add(L, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
     K.add(L, pkg("rich", "b/rich", "terminal colour output and ansi styling helper"))
     (tmp_path / "requirements.txt").write_text("rich\n")
-    q = dict(kinds=["package"], language="python", min_score=0.0, limit=5)
+    q = dict(kinds=["package"], language="python", min_score=0.0, min_sem=0.0, limit=5)
     plain = {r["package"]: r for r in K.search(L, "terminal colour output ansi styling", **q)["results"]}
     aware = {r["package"]: r for r in K.search(L, "terminal colour output ansi styling", project_dir=str(tmp_path), **q)["results"]}
     assert "already a dependency" in aware["rich"]["in_project"] and "in_project" not in aware["colorlib"]
