@@ -23,17 +23,19 @@ from pathlib import Path
 from . import knowledge as K
 from . import ops
 
-BUDGET_TOKENS = 450
+BUDGET_TOKENS = 520
 MIN_SCORE = 0.40            # final (post-weight) score below which an item is not worth the tokens (the search layer already applies its own floors)
 MIN_BY_KIND = {"rule": 0.55, "lesson": 0.50, "asset": 0.60, "package": 0.45}      # generic / fuzzy kinds must clear a higher bar
-CAPS = {"bugfix": 2, "playbook": 1, "recipe": 1, "rule": 2, "failure": 1, "asset": 1, "lesson": 1, "package": 1}
+CAPS = {"bugfix": 2, "playbook": 1, "recipe": 1, "rule": 2, "failure": 1, "asset": 4, "lesson": 1, "package": 1}
 STATE_TTL = 3 * 86400
 
 _ERR = re.compile(r"\b(error|exception|traceback|crash(?:es|ed)?|fails?|failing|failed|panic|segfault|broken|doesn'?t work|not working)\b", re.I)
 _DEBUG = re.compile(r"\b(debug|why (?:is|does|do)|bug|wrong|unexpected|flaky|hangs?|stuck|regress)", re.I)
 _CODEY = re.compile(r"`|\b[\w/.-]+\.(py|js|ts|tsx|jsx|go|rs|java|c|h|cpp|sh|rb|php|sql|toml|yaml|yml|json|css|html)\b|\b(function|class|method|bug|test|tests|repo|repository|code|script|api|endpoint|library|package|module|dependency|dependencies|config|server|database|query|deploy|docker|git|commit|branch|compile|build|lint|refactor|crash|exception|stack ?trace|regex|cli|daemon|service|http|json|sql|npm|pip|cargo|systemd)\b", re.I)
 _BUILD = re.compile(r"\b(add|build|create|implement|write|make|set ?up|integrate|install|port|scaffold|generate)\b", re.I)
-_UI = re.compile(r"\b(page|landing|dashboard|ui|ux|component|template|icon|illustration|layout|form|navbar|modal|animation|animate|theme|button|card|hero)\b", re.I)
+_UI = re.compile(r"\b(page|pages|landing|dashboard|ui|ux|component|template|icon|illustration|layout|form|navbar|modal|animation|animate|theme|button|card|hero|website|web ?site|site|webpage|homepage|portfolio|storefront|blog|saas|pricing|footer|frontend|front-end)\b", re.I)
+_SITE = re.compile(r"\b(website|web ?site|site|webpage|homepage|landing|portfolio|storefront|saas|business|company|agency|startup|restaurant|shop|store|blog)\b", re.I)
+SITE_PARTS = ["hero section", "navigation bar header", "pricing section", "testimonials", "contact form", "footer"]      # what almost every marketing site is made of
 _PERF = re.compile(r"\b(slow|fast(?:er)?|optimi[sz]e|performance|latency|memory|profil\w*|speed)\b", re.I)
 
 # intent -> multiplier per candidate kind (1.0 = neutral). Chosen by hand, then checked with `assetrag context`.
@@ -184,6 +186,11 @@ def _render_playbook(lib, kid: str) -> str:
     return f"playbook [{kid}] {e['title']} (unbenchmarked): {steps}"
 
 
+def _asset_cand(r: dict, why: str) -> "Cand":
+    return Cand(r["id"], "asset", float(r.get("similarity", r.get("score", 0.0))),
+                f"asset [{r['id']}] {r.get('name', '')[:60]} ({r.get('license', '?')}, {r.get('kind', '')}): {str(r.get('description', ''))[:80]} - get_asset/import_asset", why=why)
+
+
 # ------------------------------------------------------------------ the algorithm
 def plan(lib, prompt: str, cwd: str | None = None, session_id: str = "", state: dict | None = None,
          budget: int = BUDGET_TOKENS, min_score: float = MIN_SCORE) -> Plan:
@@ -219,15 +226,21 @@ def plan(lib, prompt: str, cwd: str | None = None, session_id: str = "", state: 
             pass
     # 3) a ready-made asset, only when the prompt is a build/ui request and the library is confident
     if intent in ("ui", "build"):
+        site = bool(_SITE.search(prompt)) and intent == "ui"
         try:
-            a = ops.search_assets(lib, prompt[:300], language=lang if intent == "build" else None,
+            # a site request is about HTML/CSS whatever language the repo is in, so the project language must not filter templates out
+            a = ops.search_assets(lib, prompt[:300], language=lang if intent == "build" and not _UI.search(prompt) else None,
                                   framework=proj.get("framework"), limit=3)["results"]
             for r in a:
                 if r.get("confidence") == "high":
-                    cands.append(Cand(r["id"], "asset", float(r.get("similarity", r.get("score", 0.0))),
-                                      f"asset [{r['id']}] {r.get('name', '')[:60]} ({r.get('license', '?')}, {r.get('category', '')}): {str(r.get('description', ''))[:100]} "
-                                      f"- get_asset/import_asset to use it", why="library match"))
+                    cands.append(_asset_cand(r, "library match"))
                     break
+            if site:                                         # a whole-site request: also line up the usual sections so the page is assembled, not written from zero
+                for part in SITE_PARTS:
+                    for r in ops.search_assets(lib, part, framework=proj.get("framework"), limit=2)["results"]:
+                        if r.get("confidence") == "high" and r["kind"] in ("section-template", "page-template", "animated-component", "component"):
+                            cands.append(_asset_cand(r, "site part: " + part))
+                            break
         except Exception:  # noqa: BLE001
             pass
 
@@ -268,7 +281,8 @@ def plan(lib, prompt: str, cwd: str | None = None, session_id: str = "", state: 
 WORKFLOW = {
     "build": ("feature-impl", "before writing new code: search_assets (UI, templates, CLI/backend parts, algorithms) and find_knowledge(kinds=[\"recipe\",\"package\"]) for tested building blocks; "
               "import what fits with import_asset (keeps licence notices), build it yourself when the verdict is no_good_match"),
-    "ui": ("feature-impl", "before designing from scratch: search_assets for a licensed template/component/animation (human-made only) and import_asset what fits"),
+    "ui": ("feature-impl", "do not write the page from scratch: the licensed templates and sections listed below were picked for this request - get_asset/import_asset the ones that fit "
+           "into the project (keeps licence notices), then restyle and fill in real content; search_assets for anything missing (human-made assets only)"),
     "debug": ("targeted-debug", "before guessing: find_knowledge(error=<exact error text>) for a verified fix; a hit is a hypothesis to test; two failed attempts -> record_failure and use the root-cause playbook"),
     "error": ("targeted-debug", "before guessing: find_knowledge(error=<exact error text>) for a verified fix; a hit is a hypothesis to test; two failed attempts -> record_failure and use the root-cause playbook"),
     "perf": ("perf-optimise", "measure first; then follow the playbook"),
