@@ -153,7 +153,7 @@ def test_prompt_hook_injects_fix_and_playbook(L, tmp_path, monkeypatch):
         yield L
     out = kops.hook_prompt(json.dumps({"prompt": "tests are failing with a stack trace, how should I debug it"}), f)
     ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-    assert "playbook" in ctx and "Reproduce the failure first" in ctx and "not instructions" in ctx.lower()
+    assert "playbook" in ctx and "Reproduce the failure first" in ctx and "untrusted" in ctx.lower() and "AssetRAG workflow" in ctx and "Playbook: targeted-debug" in ctx
 
 
 def test_search_survives_embedding_outage(L):
