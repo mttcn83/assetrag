@@ -3,7 +3,7 @@ import json
 
 from assetrag import knowledge as K, kops, manifest, toolchain
 from conftest import cand
-from test_knowledge import bug
+from test_knowledge import L, bug  # noqa: F401  (L = library with a fake embedder: tests must not need a running embedding server)
 
 
 def pkg(name, repo, purpose):
@@ -21,26 +21,27 @@ def test_manifest_names_normalise(tmp_path):
     assert {"typing-extensions", "rich", "cobra", "github.com/spf13/cobra"} <= n
 
 
-def test_package_already_in_project_ranks_first(lib, tmp_path):
-    K.add(lib, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
-    K.add(lib, pkg("rich", "b/rich", "terminal colour output and ansi styling helper"))
+def test_package_already_in_project_gets_a_boost(L, tmp_path):
+    K.add(L, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
+    K.add(L, pkg("rich", "b/rich", "terminal colour output and ansi styling helper"))
     (tmp_path / "requirements.txt").write_text("rich\n")
-    plain = K.search(lib, "terminal colour output ansi styling", kinds=["package"], language="python", min_score=0.0)["results"]
-    aware = K.search(lib, "terminal colour output ansi styling", kinds=["package"], language="python", project_dir=str(tmp_path), min_score=0.0)["results"]
-    assert aware[0]["package"] == "rich" and "already a dependency" in aware[0]["in_project"]
-    assert "in_project" not in plain[0] or plain[0]["package"] != "colorlib"
+    q = dict(kinds=["package"], language="python", min_score=0.0, limit=5)
+    plain = {r["package"]: r for r in K.search(L, "terminal colour output ansi styling", **q)["results"]}
+    aware = {r["package"]: r for r in K.search(L, "terminal colour output ansi styling", project_dir=str(tmp_path), **q)["results"]}
+    assert "already a dependency" in aware["rich"]["in_project"] and "in_project" not in aware["colorlib"]
+    assert aware["rich"]["score"] - plain["rich"]["score"] >= 0.09 and aware["colorlib"]["score"] == plain["colorlib"]["score"]
 
 
-def test_installed_toolchain_is_detected_and_only_nudges(lib):
+def test_installed_toolchain_is_detected_and_only_nudges(L):
     assert toolchain.installed("python").count(".") == 2 and toolchain.installed("cobol") is None
-    K.add(lib, bug(version_spec=">=99.0"))                    # affects a Python we do not run: must still be returned
-    assert K.search(lib, "", error="KeyError: 'id'", language="python")["results"]
+    K.add(L, bug(version_spec=">=99.0"))                    # affects a Python we do not run: must still be returned
+    assert K.search(L, "", error="KeyError: 'id'", language="python")["results"]
 
 
-def test_asset_and_package_for_same_repo_collapse(lib):
-    aid = lib.admit(cand(name="colorlib helper", repo="a/colorlib", description="terminal colour output and ansi styling helper"), embed=False)
-    K.add(lib, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
-    r = kops.find_knowledge(lib, "terminal colour output ansi styling", kinds=["package"], language="python", include_assets=True)
+def test_asset_and_package_for_same_repo_collapse(L):
+    aid = L.admit(cand(name="colorlib helper", repo="a/colorlib", description="terminal colour output and ansi styling helper"), embed=False)
+    K.add(L, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
+    r = kops.find_knowledge(L, "terminal colour output ansi styling", kinds=["package"], language="python", include_assets=True)
     pk = next(x for x in r["results"] if x["kind"] == "package")
     assert pk["repo"] == "a/colorlib"
     assert aid in pk.get("also_in_library", []) and all(a["id"] != aid for a in r["assets"])
