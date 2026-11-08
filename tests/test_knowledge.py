@@ -246,3 +246,10 @@ def test_edited_authored_entry_replaces_its_old_text_but_third_party_edits_do_no
     mined = bug(provenance="mined-changelog", data={**bug()["data"], "fix": "something else entirely"}, source_url="https://x", source_license="MIT", source_name="x")
     assert K.add(L, mined)["action"] in ("duplicate", "blocked", "added")                       # never silently overwrites authored text
     assert K.get(L, first["id"])["data"]["fix"].endswith("log the payload id")
+
+
+def test_website_requests_are_ui_intent_not_generic_build():
+    from assetrag import context as C
+    for p in ("make me a professional website of a fake bussiness", "build a portfolio site for a photographer", "create a pricing page for my saas"):
+        assert C.classify(p, False) == "ui", p
+    assert C.classify("write a function that parses a csv file", False) == "build"
