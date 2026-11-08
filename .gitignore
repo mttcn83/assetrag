@@ -1,0 +1,16 @@
+/data/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+/INGESTION_STATUS.md
+/clamav-report.log
+.env
+*.log
+/ROADMAP.md
+/docs/history/
+/security-report.md
+/benchmarks/*-results*.json
+/benchmarks/needs*.json
+/benchmarks/
+/ROADMAP.md
