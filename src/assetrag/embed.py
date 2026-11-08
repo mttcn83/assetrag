@@ -1,4 +1,4 @@
-"""Local embeddings via an OpenAI-compatible /v1/embeddings endpoint (Unsloth)."""
+"""Embeddings via any OpenAI-compatible /v1/embeddings endpoint (local: Ollama, LM Studio, llama.cpp/Unsloth; hosted: OpenRouter, OpenAI, Gemini, ...)."""
 from __future__ import annotations
 
 import array
@@ -39,7 +39,7 @@ class Embedder:
         except httpx.HTTPError as e:
             raise EmbedError(
                 f"embedding server at {self.cfg.embed_url} failed: {e}. "
-                "Start an OpenAI-compatible embedding server and set ASSETRAG_EMBED_URL (see docs/INSTALL.md), "
+                "Start the server, or run `assetrag setup --reconfigure` to pick another provider or key, "
                 "or run keyword-only with ASSETRAG_EMBED_MODE=off."
             ) from e
         data = sorted(r.json()["data"], key=lambda d: d["index"])

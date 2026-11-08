@@ -2,7 +2,7 @@
 
 | Symptom | Fix |
 |---|---|
-| `embedding server … failed` | Start Unsloth Studio, load an embedding model, check `embed_url`/`embed_key`; `assetrag doctor` |
+| `embedding server … failed` | Start your embedding server (or check the key), or `assetrag setup --reconfigure`; `assetrag doctor` |
 | `library busy` / "already accessed by another instance" | Embedded Qdrant allows one process. Stop `populate`/other CLI runs, or point Qdrant at a server |
 | Search returns nothing for a framework | Framework filter hides incompatible assets; drop `--framework` to see agnostic ones |
 | `import` refused | `assetrag license <id> --profile …` shows the exact reason (copyleft/dependency/notice) |

@@ -39,24 +39,32 @@ def _write_config(path: Path, data: dict):
     path.chmod(0o600)                       # it can hold an embedding key
 
 
-def run_setup(embed_url: str | None = None, keyword_only: bool = False, verify: str = "auto", register: bool = False) -> int:
-    print(f"\n  {_c('1', 'AssetRAG setup')}\n  {NOTICE}\n")
+def run_setup(embed_url: str | None = None, keyword_only: bool = False, verify: str = "auto", register: bool = False,
+              provider: str | None = None, embed_model: str | None = None, reconfigure: bool = False, io=None) -> int:
+    from . import banner, embed_setup
+    banner.show()
+    print(f"  {_c('1', 'AssetRAG setup')}\n  {NOTICE}\n")
+    io = io or embed_setup.IO()
     cf = cfgmod._config_file()
     data = json.loads(cf.read_text()) if cf.exists() else {}
-    if embed_url:
-        data["embed_url"] = embed_url
-    cfg_now = cfgmod.Config()
-    url = data.get("embed_url", cfg_now.embed_url)
+    asked = bool(provider or embed_url or embed_model or reconfigure)
     if keyword_only:
         data["embed_mode"] = "off"
-    elif "embed_mode" not in data or embed_url:
-        data["embed_mode"] = "auto" if embed_reachable(url, data.get("embed_key", "")) else "off"
+    elif asked or "embed_mode" not in data:                   # first run, or the user asked to change it
+        updates = embed_setup.configure(provider, embed_url, embed_model, io)
+        if updates:
+            data.update(updates)
+        else:
+            data["embed_mode"] = "off"
     _write_config(cf, data)
     mode = data["embed_mode"]
     _ok(f"config {cf} (embed_mode={mode})")
     if mode == "off":
-        _note("no embedding server found, so search is keyword-only (still works, less fuzzy). "
-              "Start one and run `assetrag setup --embed-url http://127.0.0.1:8888/v1` to switch on semantic search.")
+        _note("search is keyword-only (works fully offline, less fuzzy for paraphrased queries). "
+              "Turn on semantic search any time: `assetrag setup --reconfigure`.")
+    else:
+        _ok(f"embeddings: {data.get('embed_model')} via {data.get('embed_provider') or data.get('embed_url')}"
+            + (f" (key from ${data['embed_key_env']})" if data.get("embed_key_env") else ""))
     cfg = cfgmod.load()
     _ok(f"data dir {cfg.home}")
 

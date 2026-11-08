@@ -19,7 +19,7 @@ def env(tmp_path_factory):
 
 
 def cli(env, *args):
-    return subprocess.run([sys.executable, "-m", "assetrag.cli", *args], env=env, capture_output=True, text=True, timeout=300)
+    return subprocess.run([sys.executable, "-m", "assetrag.cli", *args], env=env, capture_output=True, text=True, timeout=300, stdin=subprocess.DEVNULL)
 
 
 def test_setup_then_search_then_doctor(env):

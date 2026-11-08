@@ -25,6 +25,8 @@ class Config:
     embed_url: str = "http://127.0.0.1:8888/v1"
     embed_model: str = "unsloth/embeddinggemma-2-GGUF"   # BF16 quant, 768 dims
     embed_key: str = ""
+    embed_key_env: str = ""          # name of an env var holding the key (preferred: nothing secret is stored)
+    embed_provider: str = ""         # informational: ollama | lmstudio | llamacpp | openrouter | openai | gemini | custom
     embed_batch: int = 32
     # auto: use the embedding server and fall back to keyword search when it is down; off: never contact one (keyword-only, fully offline).
     embed_mode: str = "auto"
@@ -75,7 +77,7 @@ def load() -> Config:
         cfg.home = Path(env["ASSETRAG_HOME"]).expanduser()
     cfg.embed_url = env.get("ASSETRAG_EMBED_URL", cfg.embed_url).rstrip("/")
     cfg.embed_model = env.get("ASSETRAG_EMBED_MODEL", cfg.embed_model)
-    cfg.embed_key = env.get("ASSETRAG_EMBED_KEY", cfg.embed_key)
+    cfg.embed_key = env.get("ASSETRAG_EMBED_KEY") or (env.get(cfg.embed_key_env, "") if cfg.embed_key_env else "") or cfg.embed_key
     cfg.embed_mode = env.get("ASSETRAG_EMBED_MODE", cfg.embed_mode)
     if cfg.embed_mode not in ("auto", "off"):
         raise ValueError(f"embed_mode must be 'auto' or 'off', got {cfg.embed_mode!r}")

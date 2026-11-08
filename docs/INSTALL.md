@@ -24,17 +24,39 @@ uv venv .venv && uv pip install -e ".[dev]"
 Uninstall: `assetrag uninstall` (dry run), `assetrag uninstall --yes` (config and timers; your data is kept), add `--purge` to delete the data dir, then `pipx uninstall assetrag`.
 
 ## Embeddings (optional)
-Any OpenAI-compatible `/v1/embeddings` server works (tested: `embeddinggemma`, 768-d, via a local server). Put the endpoint in `~/.config/assetrag/config.json`
-or run `assetrag setup --embed-url http://127.0.0.1:8888/v1`:
+Semantic search needs an embedding model. `assetrag setup` (and the installer) asks where to get one and **defaults to EmbeddingGemma**:
+
+| Provider | Key | Notes |
+|---|---|---|
+| Ollama (local) | none | if EmbeddingGemma is missing, offers to download the Q4 GGUF (278 MB) from Hugging Face, sha256-checked, and `ollama create`s it |
+| LM Studio (local) | none | same download, then `lms import`; the model must be loaded in the app |
+| llama.cpp / Unsloth server (local) | none | same download (kept in `<data dir>/models/`), then prints the `llama-server -m ... --embedding` command to start it |
+| OpenRouter, OpenAI, Google Gemini (hosted) | yes | no EmbeddingGemma there, so it lists the provider's embedding models and asks which you want (or type a name) |
+| Any other OpenAI-compatible endpoint | optional | give the base URL ending in `/v1` |
+
+The key is read from `$OPENROUTER_API_KEY` / `$OPENAI_API_KEY` / `$GEMINI_API_KEY` (or `ASSETRAG_EMBED_KEY`) if set, and the config then stores only the *name* of the variable.
+Otherwise you are asked for it (input hidden) and it is saved in `~/.config/assetrag/config.json`, which is created with mode 0600. Prompts go to your terminal even under `curl | sh`.
+The model is `unsloth/embeddinggemma-300m-GGUF` (`Q4_0`, no Hugging Face login needed) under Google's Gemma terms; an interrupted download resumes on the next run.
+Task prompts are enabled only for EmbeddingGemma; any other model gets plain text. Every choice is verified with a real test embedding before it is saved.
+
+```bash
+assetrag setup --reconfigure                                   # choose again
+assetrag setup --provider openrouter --embed-model google/gemini-embedding-2   # no questions (key from $OPENROUTER_API_KEY)
+ASSETRAG_SETUP_ARGS='--provider ollama' curl -fsSL .../install.sh | sh          # same, through the installer
+```
+
+Resulting config (written for you):
 
 ```json
-{ "embed_url": "http://127.0.0.1:8888/v1",
-  "embed_model": "unsloth/embeddinggemma-2-GGUF",
-  "embed_key": "",
-  "embed_mode": "auto",
-  "profile": "closed_source" }
+{ "embed_provider": "openrouter",
+  "embed_url": "https://openrouter.ai/api/v1",
+  "embed_model": "google/gemini-embedding-2",
+  "embed_key_env": "OPENROUTER_API_KEY",
+  "embed_mode": "auto" }
 ```
+No terminal (CI, containers) means no questions: setup uses a running local server that has EmbeddingGemma, otherwise keyword-only.
 `embed_mode: "off"` (or `assetrag setup --keyword-only`) never contacts an embedding server. Embedding model weights are not included and have their own licence terms.
+Hosted providers receive the text being embedded (asset descriptions and your search queries): use a local provider if that matters.
 Env overrides: `ASSETRAG_EMBED_URL`, `ASSETRAG_EMBED_MODEL`, `ASSETRAG_EMBED_KEY`, `ASSETRAG_EMBED_MODE`, `ASSETRAG_QUERY_PREFIX`,
 `ASSETRAG_DOC_PREFIX`, `ASSETRAG_PROFILE`, `ASSETRAG_HOME` (data dir; default `$XDG_DATA_HOME/assetrag`, or an existing `~/assetrag/data`).
 Changing the model/dimension/prefix rebuilds the vector index from SQLite (`assetrag reindex`).

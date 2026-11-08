@@ -439,6 +439,9 @@ def build_parser():
     s.add_argument("--no-verify", action="store_true", help="load without executing the tests (entries are marked unverified)")
     s = add("setup", None, "first-run setup: config, built-in knowledge, MCP registration hint (safe to re-run)")
     s.add_argument("--embed-url", help="OpenAI-compatible embedding endpoint, e.g. http://127.0.0.1:8888/v1")
+    s.add_argument("--provider", choices=["ollama", "lmstudio", "llamacpp", "openrouter", "openai", "gemini", "custom"], help="embedding provider (skips the menu)")
+    s.add_argument("--embed-model", help="embedding model name (default: EmbeddingGemma where the provider has it)")
+    s.add_argument("--reconfigure", action="store_true", help="choose the embedding provider, key and model again")
     s.add_argument("--keyword-only", action="store_true", help="never use an embedding server (fully offline)")
     s.add_argument("--no-verify", action="store_true", help="do not execute recipe tests (faster; entries are marked unverified)")
     s.add_argument("--register", action="store_true", help="also run `claude mcp add assetrag` if the claude CLI is installed")
@@ -478,7 +481,7 @@ def main(argv=None):
         from . import setup_cmd
         try:
             if a.cmd == "setup":
-                return setup_cmd.run_setup(a.embed_url, a.keyword_only, "off" if a.no_verify else "auto", a.register)
+                return setup_cmd.run_setup(a.embed_url, a.keyword_only, "off" if a.no_verify else "auto", a.register, a.provider, a.embed_model, a.reconfigure)
             return setup_cmd.run_uninstall(a.yes, a.purge)
         except (OSError, ValueError, EmbedError, knowledge.KError) as e:
             print(f"error: {e}", file=sys.stderr); return 1

@@ -51,12 +51,14 @@ curl -fsSL https://raw.githubusercontent.com/mttcn83/assetrag/main/scripts/insta
 Prefer to read it first? `scripts/install.sh` is ~100 lines. It installs with `pipx`/`uv` (no sudo, no system changes), then runs `assetrag setup`.
 Or by hand: `pipx install git+https://github.com/mttcn83/assetrag && assetrag setup`.
 
-`assetrag setup` is idempotent and asks nothing it can detect: it creates the data dir, picks keyword-only mode if no embedding server is found,
-loads the built-in verified knowledge, and prints the exact command to register the MCP server with Claude Code.
+`assetrag setup` is idempotent. It creates the data dir, **asks where semantic search should get its embeddings** (default EmbeddingGemma; local Ollama, LM Studio or
+llama.cpp/Unsloth, or hosted OpenRouter, OpenAI, Gemini or any OpenAI-compatible endpoint, with an API key where needed), offers to download EmbeddingGemma if a local
+provider lacks it, lets you pick another model if a hosted provider has no EmbeddingGemma, loads the built-in verified knowledge, and prints the command to register the MCP server with Claude Code.
+Skip the questions with `--keyword-only` or `--provider openrouter --embed-model ...`; change your mind later with `assetrag setup --reconfigure`. Details: [docs/INSTALL.md](docs/INSTALL.md#embeddings-optional).
 Remove everything with `assetrag uninstall` (dry run; `--yes` removes config and timers, `--purge` also deletes the data dir).
 
 Requirements: Python 3.11+, git. Optional: `bubblewrap` (sandbox for running recipe tests), `clamav` (malware scan), `gh` (licence checks, updater),
-a local OpenAI-compatible embedding server (semantic search; without one it runs keyword-only and says so).
+an embedding provider (local or hosted; semantic search; without one it runs keyword-only and says so).
 The installer is exercised in containers on Arch, Debian, Ubuntu, Fedora and Alpine (`scripts/container-test.sh`).
 
 <p align="center"><img src="docs/images/install.jpg" alt="assetrag setup output" width="85%"><br>
