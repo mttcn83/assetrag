@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -31,6 +32,38 @@ def embed_reachable(url: str, key: str = "", timeout: float = 2.0) -> bool:
         return True
     except httpx.HTTPError:
         return False
+
+
+class Progress:
+    """One in-place bar per stage on a terminal, a line per 10% otherwise. Call progress(stage, done, total); close() before printing anything else."""
+    def __init__(self):
+        self.tty = sys.stdout.isatty() and os.environ.get("TERM") != "dumb"
+        self.stage, self.t0, self.last, self.drawn, self.open = "", 0.0, -1, 0.0, False
+
+    def __call__(self, stage: str, done: int, total: int):
+        if total <= 0:
+            return
+        now = time.time()
+        if stage != self.stage:
+            self.close()
+            self.stage, self.t0, self.last, self.drawn = stage, now, -1, 0.0
+        pct = done * 100 // total
+        if self.tty:
+            if done < total and now - self.drawn < 0.1:
+                return                                          # at most ~10 redraws a second
+            self.drawn = now
+            w = max(10, min(28, shutil.get_terminal_size().columns - len(stage) - 28))
+            fill = done * w // total
+            print(f"\r\033[K  {stage:<12} {_c('36', '█' * fill)}{'░' * (w - fill)} {done}/{total}  {now - self.t0:.0f}s", end="", flush=True)
+            self.open = True
+        elif pct // 10 != self.last // 10 or done == total:
+            print(f"  {stage} {done}/{total} ({pct}%)", flush=True)
+        self.last = pct
+
+    def close(self):
+        if self.open:
+            print(flush=True)
+            self.open = False
 
 
 def _write_config(path: Path, data: dict):
@@ -73,8 +106,10 @@ def run_setup(embed_url: str | None = None, keyword_only: bool = False, verify: 
     lib = Library(cfg, lock_wait=60)
     lib.release_vec()
     lib.close()
-    print("  loading built-in knowledge (recipes, bug fixes, rules, playbooks) ...")
-    res = seed_load.seed(log=lambda m: None, verify=verify)
+    print("  loading built-in knowledge (recipes, bug fixes, rules, playbooks): running their tests in parallel ...")
+    prog = Progress()
+    res = seed_load.seed(log=lambda m: (prog.close(), print(f"  {m}")), verify=verify, progress=prog)
+    prog.close()
     _ok(f"knowledge: {res['added']} added, {res['updated']} updated, {res['duplicate']} already there, {res['rejected']} rejected")
     if res["rejected"]:
         _note("rejected = a test really failed on this machine: " + "; ".join(f"{k} ({v[:60]})" for k, v in res["rejected_detail"][:3]))

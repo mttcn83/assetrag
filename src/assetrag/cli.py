@@ -368,7 +368,11 @@ def cmd_repomap(a):
 def cmd_seed(a, lib):
     from .seeds import load as seed_load
     lib.release_vec()
-    print(seed_load.seed(verify="off" if a.no_verify else "auto"))
+    from .setup_cmd import Progress
+    prog = Progress()
+    res = seed_load.seed(log=lambda m: (prog.close(), print(m)), verify="off" if a.no_verify else "auto", progress=prog)
+    prog.close()
+    print(res)
 
 
 def build_parser():

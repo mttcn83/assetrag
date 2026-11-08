@@ -259,6 +259,9 @@ def add(lib: Library, e: dict, *, embed: bool = True) -> dict:
                 if _fix_text(json.loads(r["data"])) != _fix_text(e["data"]):
                     e.setdefault("_conflicts", []).append(kid)
     kid = "k_" + h[:12]
+    clash = lib.con.execute("SELECT * FROM knowledge WHERE id=?", (kid,)).fetchone()
+    if clash:                                  # same entry whose stored content_hash moved on after an upgrade: update it, never crash
+        return _merge(lib, clash, e, h, vec, sigs)
     t = now()
     lib.con.execute(
         """INSERT INTO knowledge (id,kind,title,summary,data,languages,frameworks,tags,scope,project,version_spec,fixed_in,source_url,
@@ -275,6 +278,50 @@ def add(lib: Library, e: dict, *, embed: bool = True) -> dict:
     lib.con.execute("INSERT INTO knowledge_versions VALUES (?,?,?,?,?)", (kid, 1, jdump(_row_to_entry(lib.con.execute("SELECT * FROM knowledge WHERE id=?", (kid,)).fetchone())), "initial", t))
     lib.con.commit()
     return {"id": kid, "action": "quarantined" if e["status"] == "quarantined" else "added", "conflicts": e.get("_conflicts", [])}
+
+
+def prime(lib: Library, entries: list[dict], progress=None, batch: int = 64) -> int:
+    """Embed the texts of entries about to be added in large batches. add() then finds them in the cache, which is about 3x faster than one request per entry."""
+    if lib.cfg.embed_mode == "off":
+        return 0
+    texts: list[str] = []
+    for e in entries:
+        if e.get("status", "active") == "active":
+            texts.append(embed_text(e)); texts.extend(facet_texts(e))
+    texts = list(dict.fromkeys(texts))
+    for s in range(0, len(texts), batch):
+        lib.emb.embed(texts[s:s + batch])
+        if progress:
+            progress(min(s + batch, len(texts)), len(texts))
+    return len(texts)
+
+
+def reindex(lib: Library, force: bool = False, progress=None, batch: int = 64) -> int:
+    """Embed active entries that have no vector yet (all of them with force). Needed after switching embedding model, which empties the store.
+    Each chunk is one embedding request (entries and recipe facets together) and one vector-store write."""
+    if lib.cfg.embed_mode == "off":
+        return 0
+    have = set() if force else {str(p.payload.get("id")) for p in lib.vec.c.scroll(KNOWLEDGE, limit=1_000_000, with_payload=True)[0]}
+    rows = [r for r in lib.con.execute("SELECT * FROM knowledge WHERE status='active'") if r["id"] not in have]
+    for s in range(0, len(rows), batch):
+        chunk = [_row_to_entry(r) for r in rows[s:s + batch]]
+        facets = [facet_texts(e) for e in chunk]
+        vecs = lib.emb.embed([embed_text(e) for e in chunk] + [t for ts in facets for t in ts])
+        pts = [(e["id"], v, {"kind": e["kind"]}) for e, v in zip(chunk, vecs)]
+        k = len(chunk)
+        for e, ts in zip(chunk, facets):
+            for j in range(len(ts)):
+                pts.append((f"{e['id']}~{j}", vecs[k], {"kind": e["kind"]})); k += 1
+            if force and e["kind"] == "recipe":                 # drop facet vectors the new text no longer has
+                for j in range(len(ts), MAX_FACETS):
+                    try:
+                        lib.vec.delete(KNOWLEDGE, f"{e['id']}~{j}")
+                    except Exception:  # noqa: BLE001 - already absent
+                        pass
+        lib.vec.upsert(KNOWLEDGE, pts)
+        if progress:
+            progress(min(s + batch, len(rows)), len(rows))
+    return len(rows)
 
 
 def _fix_text(d: dict) -> str:

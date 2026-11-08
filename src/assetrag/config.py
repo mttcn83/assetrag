@@ -27,7 +27,7 @@ class Config:
     embed_key: str = ""
     embed_key_env: str = ""          # name of an env var holding the key (preferred: nothing secret is stored)
     embed_provider: str = ""         # informational: ollama | lmstudio | llamacpp | openrouter | openai | gemini | custom
-    embed_batch: int = 32
+    embed_batch: int = 64
     # auto: use the embedding server and fall back to keyword search when it is down; off: never contact one (keyword-only, fully offline).
     embed_mode: str = "auto"
     # EmbeddingGemma task prompts (asymmetric retrieval). Empty strings disable.

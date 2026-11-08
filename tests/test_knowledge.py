@@ -253,3 +253,19 @@ def test_website_requests_are_ui_intent_not_generic_build():
     for p in ("make me a professional website of a fake bussiness", "build a portfolio site for a photographer", "create a pricing page for my saas"):
         assert C.classify(p, False) == "ui", p
     assert C.classify("write a function that parses a csv file", False) == "build"
+
+
+def test_readding_an_upgraded_entry_merges_instead_of_crashing(L):
+    """Regression: an entry whose stored content_hash moved on (after an upgrade) re-added in its original form used to raise UNIQUE on id."""
+    first = K.add(L, bug())
+    L.con.execute("UPDATE knowledge SET content_hash='moved-on' WHERE id=?", (first["id"],)); L.con.commit()
+    again = K.add(L, bug())
+    assert again["id"] == first["id"] and again["action"] in ("duplicate", "updated", "blocked")
+    assert L.con.execute("SELECT COUNT(*) FROM knowledge").fetchone()[0] == 1
+
+
+def test_reindex_embeds_only_entries_without_vectors(L):
+    L.cfg.embed_mode = "auto"
+    K.add(L, bug()); K.add(L, bug(title="IndexError: list index out of range", data={**bug()["data"], "error": "IndexError: list index out of range"}))
+    n = K.reindex(L, force=True)
+    assert n == 2 and K.reindex(L) == 0 and K.reindex(L, force=True) == 2
