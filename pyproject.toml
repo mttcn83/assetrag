@@ -1,0 +1,25 @@
+[project]
+name = "assetrag"
+version = "1.0.0"
+description = "Local-first, license-aware asset library and engineering memory for Claude Code"
+requires-python = ">=3.11"
+dependencies = ["qdrant-client>=1.9", "mcp>=1.2,<2", "httpx>=0.27", "pyyaml>=6"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+repomap = ["tree-sitter>=0.23", "tree-sitter-javascript", "tree-sitter-typescript", "tree-sitter-go", "tree-sitter-rust", "tree-sitter-java", "tree-sitter-c", "tree-sitter-bash"]
+
+[project.scripts]
+assetrag = "assetrag.cli:main"
+assetrag-mcp = "assetrag.mcp_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/assetrag"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
