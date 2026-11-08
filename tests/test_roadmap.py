@@ -23,7 +23,7 @@ def test_manifest_names_normalise(tmp_path):
 
 def test_package_already_in_project_gets_a_boost(L, tmp_path):
     K.add(L, pkg("colorlib", "a/colorlib", "terminal colour output and ansi styling helper"))
-    K.add(L, pkg("rich", "b/rich", "terminal colour output and ansi styling helper"))
+    K.add(L, pkg("rich", "b/rich", "rich text, tables and progress bars with colour output and ansi styling in the terminal"))
     (tmp_path / "requirements.txt").write_text("rich\n")
     q = dict(kinds=["package"], language="python", min_score=0.0, min_sem=0.0, limit=5)
     plain = {r["package"]: r for r in K.search(L, "terminal colour output ansi styling", **q)["results"]}
