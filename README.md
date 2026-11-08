@@ -12,8 +12,7 @@ It finds tested building blocks, verified bug fixes and known-good packages **be
 
 <a href="docs/media/assetrag-launch-film.mp4"><img src="docs/media/preview.gif" alt="AssetRAG launch film preview (silent GIF, click for the full video with sound)" width="85%"></a>
 
-<sub>Silent preview. Click it to play the full film (1080p, with sound). Every terminal in it is a real recording of the real tool;
-the film's source and the full-quality 1440p file are in [assetrag-launch-film](https://github.com/mttcn83/assetrag-launch-film).</sub>
+<sub>Silent preview. Click it to play the full film (1080p, with sound). Every terminal in it is a real recording of the real tool; the soundtrack was synthesized for this project.</sub>
 
 </div>
 
@@ -205,7 +204,6 @@ Whether AssetRAG makes Claude measurably faster in real tasks has **not** been m
 ## What is not built
 
 Starter projects, automatic lesson capture, adapted snippets and successor detection are not in the product and are not advertised. Semantic (embedding) search is implemented and unit-tested but was not exercised in the film or the numbers above, which are keyword-only.
-The launch film's [feature inventory](https://github.com/mttcn83/assetrag-launch-film/blob/main/FEATURE_INVENTORY.md) lists every claim with its evidence.
 
 ## Docs
 
