@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "assetrag": {
+      "command": "assetrag-mcp",
+      "args": [],
+      "env": {
+        "ASSETRAG_PROFILE": "closed_source"
+      }
+    }
+  }
+}
