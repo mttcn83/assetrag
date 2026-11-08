@@ -8,11 +8,11 @@
 
 It finds tested building blocks, verified bug fixes and known-good packages **before** your agent reinvents them, and tells it honestly when nothing fits.
 
-[**▶ Watch the 2½ minute film**](docs/media/assetrag-launch-film.mp4) &nbsp;·&nbsp; [Install](#install-linux-one-line) &nbsp;·&nbsp; [Tour](#a-tour-with-real-screenshots) &nbsp;·&nbsp; [Honest numbers](#honest-numbers) &nbsp;·&nbsp; [Disclaimer](DISCLAIMER.md)
+[**▶ Watch the 95-second film**](docs/media/assetrag-launch-film.mp4) &nbsp;·&nbsp; [Install](#install-linux-one-line) &nbsp;·&nbsp; [Tour](#a-tour-with-real-screenshots) &nbsp;·&nbsp; [Honest numbers](#honest-numbers) &nbsp;·&nbsp; [Disclaimer](DISCLAIMER.md)
 
 <a href="docs/media/assetrag-launch-film.mp4"><img src="docs/media/preview.gif" alt="AssetRAG launch film preview (silent GIF, click for the full video with sound)" width="85%"></a>
 
-<sub>Silent preview. Click it to play the full film (1080p, with sound). Every terminal in it is a real recording of the real tool; the soundtrack was synthesized for this project.</sub>
+<sub>Silent preview. Click it to play the full 95-second film (1080p, with sound). Every terminal in it is a real recording of the real tool; the soundtrack was synthesized for this project.</sub>
 
 </div>
 
@@ -23,6 +23,8 @@ $ assetrag repomap .          # ranked outline of a codebase in a token budget
 $ assetrag doctor             # health score for the whole setup
 ```
 
+> **Linux only, for now.** AssetRAG is developed and tested on Linux. macOS and Windows are not supported yet. It also needs **Python 3.11+** and git.
+>
 > **Read [DISCLAIMER.md](DISCLAIMER.md) first.** No warranty, not legal advice, and you (not the author) are responsible for whatever assets or code you
 > or your AI agent end up using. AssetRAG ships no third-party assets; it indexes what you ingest, each under its own licence.
 
@@ -57,7 +59,7 @@ provider lacks it, lets you pick another model if a hosted provider has no Embed
 Skip the questions with `--keyword-only` or `--provider openrouter --embed-model ...`; change your mind later with `assetrag setup --reconfigure`. Details: [docs/INSTALL.md](docs/INSTALL.md#embeddings-optional).
 Remove everything with `assetrag uninstall` (dry run; `--yes` removes config and timers, `--purge` also deletes the data dir).
 
-Requirements: Python 3.11+, git. Optional: `bubblewrap` (sandbox for running recipe tests), `clamav` (malware scan), `gh` (licence checks, updater),
+Requirements: **Linux**, **Python 3.11+**, git. Optional: `bubblewrap` (sandbox for running recipe tests), `clamav` (malware scan), `gh` (licence checks, updater),
 an embedding provider (local or hosted; semantic search; without one it runs keyword-only and says so).
 The installer is exercised in containers on Arch, Debian, Ubuntu, Fedora and Alpine (`scripts/container-test.sh`).
 
@@ -68,6 +70,13 @@ The installer is exercised in containers on Arch, Debian, Ubuntu, Fedora and Alp
 
 Every image below is a frame from the launch film, which was rendered from real recordings of the CLI and MCP server
 (isolated demo directory, keyword-only mode, nothing typed by hand).
+
+### Your AI uses it. You can check every answer.
+
+When you type a prompt, the optional Claude Code hook adds a short, capped note before Claude answers: a ranked hit or two, each with an id. Nothing is hidden. Run `assetrag kshow <id>` yourself and you get the same entry, including the repro, the fix, and how it was verified.
+
+<p align="center"><img src="docs/images/aiuse.jpg" alt="Left: what the hook injected into Claude's prompt. Right: the same fix opened in a terminal with its verification evidence" width="95%"><br>
+<sub>Left: the real hook output for a TypeError prompt. Right: the same fix id, opened by hand.</sub></p>
 
 ### An MCP server your agent can call
 
@@ -86,12 +95,7 @@ Paste the exact error, get a fix whose reproduction and fix were both run in a n
 
 Pick a method for the situation (root-cause, refactor-safe, perf-optimise and more), grab a recipe with executed tests, or learn which mature library to use and under what licence. Playbooks are checklists and are labelled *unbenchmarked* by the product itself.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/images/playbooks.jpg" alt="Playbook"></td>
-<td width="50%"><img src="docs/images/recipes.jpg" alt="Recipe with executed tests"></td>
-</tr>
-</table>
+<p align="center"><img src="docs/images/recipes.jpg" alt="A recipe whose tests were executed in a sandbox" width="85%"></p>
 
 ### Rules and a secret scan
 
@@ -104,18 +108,13 @@ Engineering rules for a task in a few lines, and `assetrag scan-code` runs the r
 
 Search, read the licence verdict and its evidence hash, import with notices written for you. `assetrag audit` flags hotlinked CDNs, fonts and trackers in a project.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/images/assets.jpg" alt="Asset search, licence verdict and import"></td>
-<td width="50%"><img src="docs/images/privacy.jpg" alt="Privacy audit"></td>
-</tr>
-</table>
+<p align="center"><img src="docs/images/assets.jpg" alt="Importing a licensed asset with notices" width="85%"></p>
 
 ### Small context, on purpose
 
 `assetrag repomap` outlines a codebase in a token budget, and the optional Claude Code prompt hook injects only what is relevant, capped at 520 tokens. `assetrag context "<prompt>"` shows exactly what the hook would inject for a prompt, with scores and drop reasons.
 
-<p align="center"><img src="docs/images/context.jpg" alt="The real prompt hook injection for a bug-fix prompt" width="85%"></p>
+<p align="center"><img src="docs/images/context.jpg" alt="A ranked repo map in a small token budget" width="85%"></p>
 
 ### Safe to ingest
 
