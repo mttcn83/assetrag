@@ -1,0 +1,13 @@
+AssetRAG
+Copyright 2026 Mert (mttcn83)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes material derived from third-party open-source projects:
+
+  * Secret-detection rules adapted from gitleaks (https://github.com/gitleaks/gitleaks),
+    Copyright (c) 2019 Zachary Rice, MIT License. See src/assetrag/data/gitleaks_rules.json
+    and THIRD_PARTY_NOTICES.md.
+
+AssetRAG does not ship any third-party library content. Assets, templates and packages it indexes
+are fetched on the user's machine from their original sources and remain under their own licences.
