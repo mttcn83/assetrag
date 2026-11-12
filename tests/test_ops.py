@@ -1,7 +1,7 @@
 import zlib
 import json
 import pytest
-from assetrag import ops, memory
+from assetrag import ops, memory, sandbox
 from conftest import cand, MIT
 
 class FakeEmb:
@@ -72,6 +72,7 @@ def test_harvest_blocks_secrets_and_paths(L, tmp_path):
     r = ops.harvest_code(L, ["../../etc/passwd"], str(p), "x", "y", task_complete=True, own_code=True)
     assert not r["harvested"]
 
+@pytest.mark.skipif(not sandbox.available(), reason="bubblewrap not installed: the pytest quality check refuses to run code unsandboxed")
 def test_harvest_end_to_end(L, tmp_path):
     p = tmp_path / "p"; p.mkdir()
     (p / "util.py").write_text('def slug(s):\n    return "-".join(s.lower().split())\n')
